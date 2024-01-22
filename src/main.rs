@@ -1,12 +1,14 @@
 //! Shows how to render simple primitive shapes with a single color.
 
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle, transform};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use rand::Rng; // Add the rand crate for generating random numbers
+
+const BOID_SIZE: f32 = 30.;
+const NUM_BIRDS: usize = 10;
+const SPAWN_RADIUS: f32 = 250.;
 
 fn main() {
-    // let window = Window {
-    //     position: WindowPosition::new(0.0, 0.0),
-    // }
-
     App::new()
         // .add_plugins(DefaultPlugins.set(WindowPlugin:: { primary_window: Some(Window {})}))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -27,6 +29,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(WorldInspectorPlugin::new())
         .add_systems(Startup, setup)
         .run();
 }
@@ -38,42 +41,46 @@ fn setup(
 ) {
     // open on second monitor
 
-    commands.spawn(Camera2dBundle::default());
+    // Camera
+    commands.spawn((Camera2dBundle::default(), Name::new("Camera_2d")));
 
-    // Circle
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::Circle::new(50.).into()).into(),
-        material: materials.add(ColorMaterial::from(Color::PURPLE)),
-        transform: Transform::from_translation(Vec3::new(-150., 0., 0.)),
-        ..default()
-    });
+    let mut rng = rand::thread_rng();
 
-    // Rectangle
-    commands.spawn(SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgb(0.25, 0.25, 0.75),
-            custom_size: Some(Vec2::new(50.0, 100.0)),
+    for i in 0..NUM_BIRDS {
+        let x = rng.gen_range(-SPAWN_RADIUS..SPAWN_RADIUS);
+        let y = rng.gen_range(-SPAWN_RADIUS..SPAWN_RADIUS);
+
+        let transform = Transform::from_translation(Vec3::new(x, y, 0.));
+        spawn_boid(&mut commands, &mut meshes, &mut materials, transform);
+    }
+
+    // Boid
+    // commands.spawn((
+    //     MaterialMesh2dBundle {
+    //         mesh: meshes.add(shape::RegularPolygon::new(50., 3).into()).into(),
+    //         material: materials.add(ColorMaterial::from(Color::TURQUOISE)),
+    //         transform: Transform::from_translation(Vec3::new(150., 0., 0.)),
+    //         ..default()
+    //     },
+    //     Name::new("Boid"),
+    // ));
+}
+
+fn spawn_boid(
+    mut commands: &mut Commands,
+    mut meshes: &mut ResMut<Assets<Mesh>>,
+    mut materials: &mut ResMut<Assets<ColorMaterial>>,
+    transform: Transform,
+) {
+    commands.spawn((
+        MaterialMesh2dBundle {
+            mesh: meshes
+                .add(shape::RegularPolygon::new(BOID_SIZE, 3).into())
+                .into(),
+            material: materials.add(ColorMaterial::from(Color::TURQUOISE)),
+            transform,
             ..default()
         },
-        transform: Transform::from_translation(Vec3::new(-50., 0., 0.)),
-        ..default()
-    });
-
-    // Quad
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes
-            .add(shape::Quad::new(Vec2::new(50., 100.)).into())
-            .into(),
-        material: materials.add(ColorMaterial::from(Color::LIME_GREEN)),
-        transform: Transform::from_translation(Vec3::new(50., 0., 0.)),
-        ..default()
-    });
-
-    // Hexagon
-    commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(shape::RegularPolygon::new(50., 6).into()).into(),
-        material: materials.add(ColorMaterial::from(Color::TURQUOISE)),
-        transform: Transform::from_translation(Vec3::new(150., 0., 0.)),
-        ..default()
-    });
+        Name::new("Boid"),
+    ));
 }
